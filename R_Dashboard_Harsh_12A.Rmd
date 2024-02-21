@@ -1,0 +1,200 @@
+# To view this dashboard, you need to first run the program and then knit the document
+# Please install the required pacakages, if runtime throws errors by uncommenting below line-
+# install.packages(c("flexdashboard", "knitr", "DT", "rpivotTable","ggplot2", "plotly", "dplyr", "openintro", "ggvis", "highcharter"))
+
+# Define the libraries you want to install
+libraries <- c("flexdashboard", "knitr", "DT", "rpivotTable","ggplot2", "plotly", "dplyr", "openintro", "ggvis", "highcharter")
+
+# Loop through the libraries and install them silently
+for (lib in libraries) {
+  # Check if the library is already installed
+  if (!require(lib, character.only = TRUE)) {
+    # Install the library from CRAN without any output or messages
+    install.packages(lib, repos = "https://cran.r-project.org", quiet = TRUE, verbose = FALSE)
+    # Load the library silently
+    suppressPackageStartupMessages(library(lib, character.only = TRUE))
+  }
+}
+
+---
+output:
+  flexdashboard::flex_dashboard: default
+  pdf_document: default
+  html_document: default
+---
+
+---
+title:  "Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    social: [ "twitter", "facebook", "menu"]
+    source_code: embed
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(knitr)
+library(DT)
+library(rpivotTable)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(openintro)
+library(highcharter)
+library(ggvis)
+```
+
+
+```{r}
+data <- read.csv("https://github.com/bkrai/R-files-from-YouTube/raw/main/vehicle.csv")
+```
+
+```{r}
+mycolors <- c("blue", "#FFC125", "darkgreen", "darkorange")
+```
+
+Interactive Data Visualization
+=====================================
+
+Row
+-------------------------------------
+
+### Car Failure Analysis
+
+```{r}
+valueBox(paste("Failure"),
+         color = "warning")
+```
+
+### Car Failures in US
+
+```{r}
+valueBox(length(data$State),
+         icon = "fa-user")
+```
+
+### **Labor Cost**
+
+```{r}
+gauge(round(mean(data$lc),
+            digits = 2),
+            min = 0,
+            max = 350,
+            gaugeSectors(success = c(0, 150),
+                         warning = c(150, 240),
+                         danger = c(240, 350),
+                         colors = c("green", "yellow", "red")))
+```
+
+### Massachusetts
+
+```{r}
+valueBox(sum(data$State == "MA"),
+         icon = 'fa-building')
+```
+
+### California
+
+```{r}
+valueBox(sum(data$State == "CA"),
+         icon = 'fa-building')
+```
+
+### Texas
+
+```{r}
+valueBox(sum(data$State == "TX"),
+         icon = 'fa-building')
+```
+
+### Florida
+
+```{r}
+valueBox(sum(data$State == "FL"),
+         icon = 'fa-building')
+```
+
+Row
+-------------------------------
+
+### Failures By State
+
+```{r}
+p1 <- data %>%
+         group_by(State) %>%
+         summarise(count = n()) %>%
+         plot_ly(x = ~State,
+                 y = ~count,
+                 color = "blue",
+                 type = 'bar') %>%
+layout(xaxis = list(title = "Failures By State"),
+yaxis = list(title = 'Count'))
+p1
+```
+
+### Top States
+
+```{r}
+p2 <- data %>%
+         group_by(State) %>%
+         summarise(count = n()) %>%
+         filter(count>50) %>%
+         plot_ly(labels = ~State,
+                 values = ~count,
+                 marker = list(colors = mycolors)) %>%
+         add_pie(hole = 0.2) %>%
+         layout(xaxis = list(zeroline = F,
+                             showline = F,
+                             showticklabels = F,
+                             showgrid = F),
+                yaxis = list(zeroline = F,
+                             showline = F,
+                             showticklabels=F,
+                             showgrid=F))
+p2
+```
+
+### FM Vs Mileage
+
+```{r}
+p3 <- plot_ly(data,
+              x = ~fm,
+              y = ~Mileage,
+              text = paste("FM:", data$fm,
+                           "Mileage:",
+                           data$Mileage),
+              type = "bar") %>%
+         layout(xaxis = list(title="FM"),
+                yaxis = list(title = "Failure Mileage"))
+p3
+```
+
+Row
+------------------------------------
+### Scatter Plot of Month Vs Mileage
+
+```{r}
+p4 <- plot_ly(data, x=~fm) %>%
+         add_markers(y = ~Mileage,
+                     text = ~paste("Mileage: ", Mileage),
+                     showlegend = F) %>%
+         add_lines(y = ~fitted(loess(Mileage ~ fm)),
+                   name = "Loess Smoother",
+                   color = I("#FFC125"),
+                   showlegend = T,
+                   line = list(width=5)) %>%
+         layout(xaxis = list(title = "Month"),
+                yaxis = list(title = "Mileage"))
+p4
+```
+
+### Box Plot of Top State
+
+```{r}
+data %>%
+         group_by(State) %>%
+         ggvis(~State, ~lc, fill = ~State) %>%
+         layer_boxplots()
+```
